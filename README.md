@@ -8,4 +8,4 @@ The site is published with GitHub Pages. Pushing changes to `main`
 triggers a GitHub Actions workflow that deploys the contents of
 the repository to GitHub Pages.
 
-After the workflow runs, the site will be available at `https://<username>.github.io/jasper/` (replace `<username>` with the GitHub account that owns this repository).
+After the workflow runs, the site will be available at `https://andersone1.github.io/jasper/`
