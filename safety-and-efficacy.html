@@ -329,11 +329,14 @@
     function computeUtility() {
       const wE = parseFloat(effSlider.value);
       const wS = parseFloat(safSlider.value);
-      effVal.textContent = wE.toFixed(1);
-      safVal.textContent = wS.toFixed(1);
+      const total = wE + wS;
+      const wENorm = total === 0 ? 0.5 : wE / total;
+      const wSNorm = total === 0 ? 0.5 : wS / total;
+      effVal.textContent = wENorm.toFixed(2);
+      safVal.textContent = wSNorm.toFixed(2);
       const easi = [55, 70, 80, 90];
       const teae = [15, 11, 18, 28];
-      const util = easi.map((e, i) => e * wE - teae[i] * wS);
+      const util = easi.map((e, i) => e * wENorm - teae[i] * wSNorm);
       utilityChart.data.datasets[0].data = util;
       utilityChart.update();
     }
