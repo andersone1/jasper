@@ -5,14 +5,342 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Safety and Efficacy</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    #weight-controls {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      width: 200px;
+    }
+    #weight-controls div {
+      margin-bottom: 0.5rem;
+    }
+    .chart-container {
+      width: 100%;
+      max-width: 800px;
+      margin: 2rem auto;
+    }
+    .density-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+    }
+    .density-wrapper .chart-container {
+      max-width: 400px;
+    }
+  </style>
 </head>
 <body>
   <header>
-    <h1>Safety and Efficacy</h1>
+    <h1>Model-Informed Drug Development: ADX-123 vs Dupilumab (SoC)</h1>
   </header>
+  <div id="weight-controls">
+    <div>
+      <label for="effWeight">EASI-75 Weight: <span id="effWeightVal">0.5</span></label>
+      <input type="range" id="effWeight" min="0" max="1" step="0.1" value="0.5" />
+    </div>
+    <div>
+      <label for="safWeight">TEAE Weight: <span id="safWeightVal">0.5</span></label>
+      <input type="range" id="safWeight" min="0" max="1" step="0.1" value="0.5" />
+    </div>
+  </div>
   <main>
-    <p>Content for the Safety and Efficacy will go here.</p>
+    <div class="chart-container">
+      <h2>Longitudinal EASI-75 (%)</h2>
+      <canvas id="easiChart"></canvas>
+    </div>
+    <div class="chart-container">
+      <h2>Longitudinal TEAE Rate (Higher = Worse)</h2>
+      <canvas id="teaeChart"></canvas>
+    </div>
+    <div class="density-wrapper">
+      <div class="chart-container">
+        <h2>EASI-75 (%) at Week 12</h2>
+        <canvas id="easiDist"></canvas>
+      </div>
+      <div class="chart-container">
+        <h2>TEAE Rate (%) at Week 12</h2>
+        <canvas id="teaeDist"></canvas>
+      </div>
+    </div>
+    <div class="chart-container">
+      <h2>Utility at Week 12</h2>
+      <canvas id="utilityChart"></canvas>
+    </div>
     <p><a href="index.html">Back to Dashboard</a></p>
+    <section>
+      <h2>Overall Interpretation</h2>
+      <p>
+        Efficacy improves with higher ADX-123 doses, peaking at 20 mg. Safety declines with dose, as TEAE rates are highest at 20 mg. Balancing efficacy and safety equally, the 10 mg dose yields the highest utility, indicating the best trade-off.
+      </p>
+    </section>
   </main>
+  <script>
+    const weeks = [1, 2, 4, 8, 12];
+    const easiDup = [10, 20, 35, 45, 55];
+    const easi5 = [15, 25, 40, 60, 70];
+    const easi10 = [20, 30, 50, 70, 80];
+    const easi20 = [25, 40, 60, 80, 90];
+
+    const teaeDup = [5, 10, 12, 14, 15];
+    const teae5 = [4, 8, 9, 10, 11];
+    const teae10 = [6, 12, 15, 17, 18];
+    const teae20 = [8, 15, 20, 25, 28];
+
+    function bandDataset(label, border, fill, lower, upper) {
+      return [
+        {
+          label: label + " lower",
+          data: lower,
+          borderColor: "transparent",
+          backgroundColor: fill,
+          pointRadius: 0,
+          fill: false,
+        },
+        {
+          label: label,
+          data: upper,
+          borderColor: border,
+          backgroundColor: fill,
+          fill: "-1",
+          tension: 0.4,
+        },
+      ];
+    }
+
+    const easiDatasets = [
+      ...bandDataset(
+        "Dupilumab (SoC)",
+        "#808080",
+        "rgba(128,128,128,0.2)",
+        easiDup.map((v) => v - 5),
+        easiDup.map((v) => v + 5)
+      ),
+      ...bandDataset(
+        "ADX-123 5 mg",
+        "#d62728",
+        "rgba(214,39,40,0.2)",
+        easi5.map((v) => v - 5),
+        easi5.map((v) => v + 5)
+      ),
+      ...bandDataset(
+        "ADX-123 10 mg",
+        "#2ca02c",
+        "rgba(44,160,44,0.2)",
+        easi10.map((v) => v - 5),
+        easi10.map((v) => v + 5)
+      ),
+      ...bandDataset(
+        "ADX-123 20 mg",
+        "#1f77b4",
+        "rgba(31,119,180,0.2)",
+        easi20.map((v) => v - 5),
+        easi20.map((v) => v + 5)
+      ),
+    ];
+
+    const teaeDatasets = [
+      ...bandDataset(
+        "Dupilumab (SoC)",
+        "#808080",
+        "rgba(128,128,128,0.2)",
+        teaeDup.map((v) => v - 1),
+        teaeDup.map((v) => v + 1)
+      ),
+      ...bandDataset(
+        "ADX-123 5 mg",
+        "#d62728",
+        "rgba(214,39,40,0.2)",
+        teae5.map((v) => v - 1),
+        teae5.map((v) => v + 1)
+      ),
+      ...bandDataset(
+        "ADX-123 10 mg",
+        "#2ca02c",
+        "rgba(44,160,44,0.2)",
+        teae10.map((v) => v - 1),
+        teae10.map((v) => v + 1)
+      ),
+      ...bandDataset(
+        "ADX-123 20 mg",
+        "#1f77b4",
+        "rgba(31,119,180,0.2)",
+        teae20.map((v) => v - 1),
+        teae20.map((v) => v + 1)
+      ),
+    ];
+
+    const legendFilter = (item) => !item.text.includes("lower");
+
+    new Chart(document.getElementById("easiChart"), {
+      type: "line",
+      data: { labels: weeks, datasets: easiDatasets },
+      options: {
+        plugins: { legend: { labels: { filter: legendFilter } } },
+        scales: {
+          y: { title: { display: true, text: "EASI-75 (%)" } },
+          x: { title: { display: true, text: "Week" } },
+        },
+      },
+    });
+
+    new Chart(document.getElementById("teaeChart"), {
+      type: "line",
+      data: { labels: weeks, datasets: teaeDatasets },
+      options: {
+        plugins: { legend: { labels: { filter: legendFilter } } },
+        scales: {
+          y: { title: { display: true, text: "TEAE Rate (%)" } },
+          x: { title: { display: true, text: "Week" } },
+        },
+      },
+    });
+
+    function gaussian(x, mean, sd) {
+      return (
+        Math.exp(-0.5 * Math.pow((x - mean) / sd, 2)) /
+        (sd * Math.sqrt(2 * Math.PI))
+      );
+    }
+    const xVals = Array.from({ length: 101 }, (_, i) => i);
+
+    function distDataset(label, color, mean, sd) {
+      return {
+        label,
+        borderColor: color,
+        backgroundColor: "transparent",
+        data: xVals.map((x) => ({ x, y: gaussian(x, mean, sd) })),
+        showLine: true,
+        pointRadius: 0,
+      };
+    }
+
+    function vlineDataset(color, mean, sd) {
+      return {
+        label: color + " line",
+        borderColor: color,
+        borderDash: [5, 5],
+        data: [
+          { x: mean, y: 0 },
+          { x: mean, y: gaussian(mean, mean, sd) },
+        ],
+        showLine: true,
+        pointRadius: 0,
+      };
+    }
+
+    const easiDistDatasets = [
+      distDataset("Dupilumab (SoC)", "#808080", 55, 7),
+      vlineDataset("#808080", 55, 7),
+      distDataset("ADX-123 5 mg", "#d62728", 70, 7),
+      vlineDataset("#d62728", 70, 7),
+      distDataset("ADX-123 10 mg", "#2ca02c", 80, 7),
+      vlineDataset("#2ca02c", 80, 7),
+      distDataset("ADX-123 20 mg", "#1f77b4", 90, 7),
+      vlineDataset("#1f77b4", 90, 7),
+    ];
+
+    const teaeDistDatasets = [
+      distDataset("Dupilumab (SoC)", "#808080", 15, 3),
+      vlineDataset("#808080", 15, 3),
+      distDataset("ADX-123 5 mg", "#d62728", 11, 2),
+      vlineDataset("#d62728", 11, 2),
+      distDataset("ADX-123 10 mg", "#2ca02c", 18, 3),
+      vlineDataset("#2ca02c", 18, 3),
+      distDataset("ADX-123 20 mg", "#1f77b4", 28, 4),
+      vlineDataset("#1f77b4", 28, 4),
+    ];
+
+    new Chart(document.getElementById("easiDist"), {
+      type: "scatter",
+      data: { datasets: easiDistDatasets },
+      options: {
+        plugins: {
+          legend: {
+            labels: { filter: (item) => !item.text.includes(" line") },
+          },
+        },
+        scales: {
+          x: {
+            type: "linear",
+            title: { display: true, text: "EASI-75 (%)" },
+            min: 0,
+            max: 100,
+          },
+          y: { display: false },
+        },
+      },
+    });
+
+    new Chart(document.getElementById("teaeDist"), {
+      type: "scatter",
+      data: { datasets: teaeDistDatasets },
+      options: {
+        plugins: {
+          legend: {
+            labels: { filter: (item) => !item.text.includes(" line") },
+          },
+        },
+        scales: {
+          x: {
+            type: "linear",
+            title: { display: true, text: "TEAE Rate (%)" },
+            min: 0,
+            max: 40,
+          },
+          y: { display: false },
+        },
+      },
+    });
+
+    const effSlider = document.getElementById("effWeight");
+    const safSlider = document.getElementById("safWeight");
+    const effVal = document.getElementById("effWeightVal");
+    const safVal = document.getElementById("safWeightVal");
+
+    const utilityChart = new Chart(document.getElementById("utilityChart"), {
+      type: "bar",
+      data: {
+        labels: [
+          "Dupilumab (SoC)",
+          "ADX-123 5 mg",
+          "ADX-123 10 mg",
+          "ADX-123 20 mg",
+        ],
+        datasets: [
+          {
+            label: "Utility",
+            backgroundColor: ["#808080", "#d62728", "#2ca02c", "#1f77b4"],
+            data: [0, 0, 0, 0],
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: { title: { display: true, text: "Utility Score" } },
+        },
+      },
+    });
+
+    function computeUtility() {
+      const wE = parseFloat(effSlider.value);
+      const wS = parseFloat(safSlider.value);
+      effVal.textContent = wE.toFixed(1);
+      safVal.textContent = wS.toFixed(1);
+      const easi = [55, 70, 80, 90];
+      const teae = [15, 11, 18, 28];
+      const util = easi.map((e, i) => e * wE - teae[i] * wS);
+      utilityChart.data.datasets[0].data = util;
+      utilityChart.update();
+    }
+
+    effSlider.addEventListener("input", computeUtility);
+    safSlider.addEventListener("input", computeUtility);
+    computeUtility();
+  </script>
 </body>
 </html>
